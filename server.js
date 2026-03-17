@@ -17,7 +17,8 @@ const path = require('path');
 app.use(express.static(path.join(__dirname, '/')));
 
 // Initialize SQLite database
-const db = new sqlite3.Database('./data.db', (err) => {
+const dbPath = process.env.DATABASE_PATH || './data.db';
+const db = new sqlite3.Database(dbPath, (err) => {
   if (err) {
     console.error('Error opening database', err.message);
   } else {
