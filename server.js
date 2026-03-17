@@ -42,6 +42,16 @@ const db = new sqlite3.Database(dbPath, (err) => {
                });
             }
           });
+
+          // Check if superadmin exists
+          db.get('SELECT * FROM users WHERE role = ?', ['superadmin'], (err, row) => {
+            if (!row) {
+               bcrypt.hash('superadmin123', 10, (err, hash) => {
+                 db.run('INSERT INTO users (username, password, role) VALUES (?, ?, ?)', ['superadmin', hash, 'superadmin']);
+                 console.log('Default superadmin user created.');
+               });
+            }
+          });
         }
     });
 
@@ -96,8 +106,15 @@ const requireAdmin = (req, res, next) => {
 };
 
 const requireUserOrAdmin = (req, res, next) => {
-     if (req.user.role !== 'admin' && req.user.role !== 'user') {
+     if (req.user.role !== 'admin' && req.user.role !== 'user' && req.user.role !== 'superadmin') {
         return res.status(403).json({ error: 'Access denied' });
+    }
+    next();
+};
+
+const requireSuperAdmin = (req, res, next) => {
+    if (req.user.role !== 'superadmin') {
+        return res.status(403).json({ error: 'Superadmin access required' });
     }
     next();
 };
@@ -139,6 +156,40 @@ app.post('/api/users', authenticateToken, requireAdmin, (req, res) => {
              }
              res.json({ id: this.lastID, username, role: 'user' });
         });
+    });
+});
+
+// Superadmin: Get all users
+app.get('/api/super/users', authenticateToken, requireSuperAdmin, (req, res) => {
+    db.all('SELECT id, username, role FROM users', [], (err, users) => {
+        if (err) return res.status(500).json({ error: err.message });
+        res.json(users);
+    });
+});
+
+// Superadmin: Update user
+app.put('/api/super/users/:id', authenticateToken, requireSuperAdmin, (req, res) => {
+    const { username, password, role } = req.body;
+    if (password) {
+        bcrypt.hash(password, 10, (err, hash) => {
+            db.run('UPDATE users SET username = ?, password = ?, role = ? WHERE id = ?', [username, hash, role || 'user', req.params.id], (err) => {
+                if (err) return res.status(500).json({ error: err.message });
+                res.json({ success: true });
+            });
+        });
+    } else {
+        db.run('UPDATE users SET username = ?, role = ? WHERE id = ?', [username, role || 'user', req.params.id], (err) => {
+            if (err) return res.status(500).json({ error: err.message });
+            res.json({ success: true });
+        });
+    }
+});
+
+// Superadmin: Delete user
+app.delete('/api/super/users/:id', authenticateToken, requireSuperAdmin, (req, res) => {
+    db.run('DELETE FROM users WHERE id = ?', [req.params.id], (err) => {
+        if (err) return res.status(500).json({ error: err.message });
+        res.json({ success: true });
     });
 });
 
@@ -194,6 +245,11 @@ app.post('/api/data', authenticateToken, requireUserOrAdmin, (req, res) => {
             res.json({ success: true });
         });
     });
+});
+
+// Serve the SuperAdmin page
+app.get('/superadmin', (req, res) => {
+    res.sendFile(path.join(__dirname, 'superadmin.html'));
 });
 
 // Fallback to index.html for any other routes (Frontend routing)
