@@ -197,7 +197,7 @@ app.post('/api/data', authenticateToken, requireUserOrAdmin, (req, res) => {
 });
 
 // Fallback to index.html for any other routes (Frontend routing)
-app.get('*', (req, res) => {
+app.use((req, res) => {
   res.sendFile(path.join(__dirname, 'index.html'));
 });
 
