@@ -24,7 +24,7 @@ function App() {
   const [earnedLeaves, setEarnedLeaves] = useState([]);
   const [takenLeaves, setTakenLeaves] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
-  const API_URL = 'http://localhost:3000/api'; // Change for production
+  const API_URL = '/api'; // Using relative path for production and local serving
 
   // Initial Fetch Data
   useEffect(() => {

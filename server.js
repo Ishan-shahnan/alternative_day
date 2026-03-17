@@ -12,6 +12,10 @@ const SECRET_KEY = process.env.SECRET_KEY || 'your-very-secret-key'; // Change i
 app.use(cors());
 app.use(express.json());
 
+// Serve static files (Frontend)
+const path = require('path');
+app.use(express.static(path.join(__dirname, '/')));
+
 // Initialize SQLite database
 const db = new sqlite3.Database('./data.db', (err) => {
   if (err) {
@@ -189,6 +193,11 @@ app.post('/api/data', authenticateToken, requireUserOrAdmin, (req, res) => {
             res.json({ success: true });
         });
     });
+});
+
+// Fallback to index.html for any other routes (Frontend routing)
+app.get('*', (req, res) => {
+  res.sendFile(path.join(__dirname, 'index.html'));
 });
 
 app.listen(port, () => {
